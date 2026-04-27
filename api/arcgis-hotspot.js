@@ -1,27 +1,41 @@
 export default async function handler(req, res) {
   try {
+    const hours = parseInt(req.query.hours || "9999"); // default semua
+
     const url = "https://opsroom.sipongidata.my.id/api/opsroom/indoHotspot?wilayah=IN&filterperiode=false&satelit[]=NASA-MODIS&satelit[]=NASA-SNPP&satelit[]=NASA-NOAA20&confidence[]=low&confidence[]=medium&confidence[]=high";
 
     const response = await fetch(url);
     const json = await response.json();
 
-    const raw = json.data || [];
+    const raw = json.features || [];
+
+    const now = new Date();
 
     const features = raw
-      .filter(d => d.latitude && d.longitude)
-      .map((d) => ({
+      .filter(f => f.geometry && f.geometry.coordinates)
+      .filter(f => {
+        const waktu = f.properties.date_hotspot_ori;
+        if (!waktu) return true;
+
+        const t = new Date(waktu);
+        const diffHours = (now - t) / (1000 * 60 * 60);
+
+        return diffHours <= hours;
+      })
+      .map((f) => ({
         type: "Feature",
         properties: {
-          confidence: d.confidence,
-          brightness: d.brightness,
-          waktu: d.tanggal || d.acq_date || d.datetime || "unknown"
+          confidence: f.properties.confidence_level,
+          brightness: f.properties.confidence,
+          provinsi: f.properties.nama_provinsi,
+          kabupaten: f.properties.kabkota,
+          kecamatan: f.properties.kecamatan,
+          desa: f.properties.desa,
+          waktu: f.properties.date_hotspot_ori
         },
         geometry: {
           type: "Point",
-          coordinates: [
-            Number(d.longitude),
-            Number(d.latitude)
-          ]
+          coordinates: f.geometry.coordinates
         }
       }));
 
