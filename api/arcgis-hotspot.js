@@ -1,26 +1,19 @@
 export default async function handler(req, res) {
   try {
-    // ambil parameter dari URL (opsional)
-    const confidence = req.query.confidence || "low,medium,high";
-    const late = req.query.late || "24";
-
-    // bikin URL ke API SiPongi
-    const url = `https://opsroom.sipongidata.my.id/api/opsroom/indoHotspot?wilayah=IN&late=${late}&confidence[]=${confidence}`;
+    const url = "https://opsroom.sipongidata.my.id/api/opsroom/indoHotspot?wilayah=IN&late=24&confidence[]=low&confidence[]=medium&confidence[]=high";
 
     const response = await fetch(url);
     const json = await response.json();
 
-    const raw = json.data || [];
+    let raw = json.data || [];
 
-    const features = raw
+    let features = raw
       .filter(d => d.latitude && d.longitude)
       .map((d) => ({
         type: "Feature",
         properties: {
           confidence: d.confidence || "unknown",
-          satellite: d.satelit || "unknown",
-          brightness: Number(d.brightness) || 0,
-          provinsi: d.provinsi || "-"
+          brightness: Number(d.brightness) || 0
         },
         geometry: {
           type: "Point",
@@ -31,9 +24,25 @@ export default async function handler(req, res) {
         }
       }));
 
+    // 🔥 kalau kosong → kasih dummy point
+    if (features.length === 0) {
+      features = [
+        {
+          type: "Feature",
+          properties: {
+            note: "no data"
+          },
+          geometry: {
+            type: "Point",
+            coordinates: [110, -2]
+          }
+        }
+      ];
+    }
+
     res.status(200).json({
       type: "FeatureCollection",
-      features: features
+      features
     });
 
   } catch (err) {
