@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   try {
-    const url = "https://opsroom.sipongidata.my.id/api/opsroom/indoHotspot?wilayah=IN&late=24&confidence[]=low&confidence[]=medium&confidence[]=high";
+    const url = "https://opsroom.sipongidata.my.id/api/opsroom/indoHotspot?wilayah=IN&filterperiode=false&late=24&satelit[]=NASA-MODIS&satelit[]=NASA-SNPP&satelit[]=NASA-NOAA20&confidence[]=low&confidence[]=medium&confidence[]=high";
 
     const response = await fetch(url);
     const json = await response.json();
