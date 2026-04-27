@@ -2,11 +2,6 @@ export default async function handler(req, res) {
   try {
     // ✅ CORS
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
-    // ✅ penting untuk ArcGIS
-    res.setHeader("Content-Type", "application/json");
 
     const hours = parseInt(req.query.hours || "24");
 
@@ -39,13 +34,11 @@ export default async function handler(req, res) {
         }
       }));
 
-    const geojson = {
+    // ✅ ini penting: pakai json() bukan send()
+    res.status(200).json({
       type: "FeatureCollection",
       features
-    };
-
-    // 🔥 kirim response bersih
-    res.status(200).send(JSON.stringify(geojson));
+    });
 
   } catch (err) {
     res.status(500).json({ error: err.message });
