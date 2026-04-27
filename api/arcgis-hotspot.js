@@ -1,11 +1,14 @@
 export default async function handler(req, res) {
   try {
-    // CORS wajib untuk arcgis
+    // ✅ CORS
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    
-    const hours = parseInt(req.query.hours || "9999"); // default semua
+
+    // ✅ penting untuk ArcGIS
+    res.setHeader("Content-Type", "application/json");
+
+    const hours = parseInt(req.query.hours || "24");
 
     const url = "https://opsroom.sipongidata.my.id/api/opsroom/indoHotspot?wilayah=IN&filterperiode=false&satelit[]=NASA-MODIS&satelit[]=NASA-SNPP&satelit[]=NASA-NOAA20&confidence[]=low&confidence[]=medium&confidence[]=high";
 
@@ -13,29 +16,21 @@ export default async function handler(req, res) {
     const json = await response.json();
 
     const raw = json.features || [];
-
     const now = new Date();
 
     const features = raw
       .filter(f => f.geometry && f.geometry.coordinates)
       .filter(f => {
-        const waktu = f.properties.date_hotspot_ori;
-        if (!waktu) return true;
-
-        const t = new Date(waktu);
-        const diffHours = (now - t) / (1000 * 60 * 60);
-
-        return diffHours <= hours;
+        const t = new Date(f.properties.date_hotspot_ori);
+        const diff = (now - t) / (1000 * 60 * 60);
+        return diff <= hours;
       })
-      .map((f) => ({
+      .map(f => ({
         type: "Feature",
         properties: {
           confidence: f.properties.confidence_level,
-          brightness: f.properties.confidence,
           provinsi: f.properties.nama_provinsi,
           kabupaten: f.properties.kabkota,
-          kecamatan: f.properties.kecamatan,
-          desa: f.properties.desa,
           waktu: f.properties.date_hotspot_ori
         },
         geometry: {
@@ -44,10 +39,13 @@ export default async function handler(req, res) {
         }
       }));
 
-    res.status(200).json({
+    const geojson = {
       type: "FeatureCollection",
       features
-    });
+    };
+
+    // 🔥 kirim response bersih
+    res.status(200).send(JSON.stringify(geojson));
 
   } catch (err) {
     res.status(500).json({ error: err.message });
