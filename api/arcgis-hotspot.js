@@ -1,6 +1,11 @@
 export default async function handler(req, res) {
   try {
-    const url = "https://opsroom.sipongidata.my.id/api/opsroom/indoHotspot?wilayah=IN&confidence[]=low&confidence[]=medium&confidence[]=high";
+    // ambil parameter dari URL (opsional)
+    const confidence = req.query.confidence || "low,medium,high";
+    const late = req.query.late || "24";
+
+    // bikin URL ke API SiPongi
+    const url = `https://opsroom.sipongidata.my.id/api/opsroom/indoHotspot?wilayah=IN&late=${late}&confidence[]=${confidence}`;
 
     const response = await fetch(url);
     const json = await response.json();
@@ -9,30 +14,25 @@ export default async function handler(req, res) {
 
     const features = raw
       .filter(d => d.latitude && d.longitude)
-      .map((d, i) => ({
-        attributes: {
-          OBJECTID: i + 1,
+      .map((d) => ({
+        type: "Feature",
+        properties: {
           confidence: d.confidence || "unknown",
           satellite: d.satelit || "unknown",
-          brightness: Number(d.brightness) || 0
+          brightness: Number(d.brightness) || 0,
+          provinsi: d.provinsi || "-"
         },
         geometry: {
-          x: Number(d.longitude),
-          y: Number(d.latitude)
+          type: "Point",
+          coordinates: [
+            Number(d.longitude),
+            Number(d.latitude)
+          ]
         }
       }));
 
     res.status(200).json({
-      objectIdFieldName: "OBJECTID",
-      geometryType: "esriGeometryPoint",
-      spatialReference: { wkid: 4326 },
-      exceededTransferLimit: false,
-      fields: [
-        { name: "OBJECTID", type: "esriFieldTypeOID" },
-        { name: "confidence", type: "esriFieldTypeString" },
-        { name: "satellite", type: "esriFieldTypeString" },
-        { name: "brightness", type: "esriFieldTypeDouble" }
-      ],
+      type: "FeatureCollection",
       features: features
     });
 
